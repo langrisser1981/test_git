@@ -2,31 +2,32 @@ import boto3
 import io
 from PIL import ImageDraw, ExifTags, ImageColor
 from PIL import Image as PilImage
-
 from tkinter import filedialog
 from tkinter import *
 
 root = Tk()
 
 def fileopen():
-    filename =  filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
-    print(filename)
     text.delete(1.0, END)
+    filename =  filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
     text.insert(END, filename+'\n')
-    loadimage()
+    loadS3(filename)
 
-def loadimage():
-    bucket="rekognition-20181204"
-    photo="input.jpg"
+def loadS3(filename):
     client=boto3.client('rekognition')
 
     # Load image from S3 bucket
-    s3_connection = boto3.resource('s3')
-    s3_object = s3_connection.Object(bucket,photo)
-    s3_response = s3_object.get()
+    bucket="rekognition-20181204"
+    photo="input.jpg"
+    s3 = boto3.resource('s3')
+    with open(filename, 'rb') as f:
+        s3.Object(bucket, photo).upload_fileobj(f)
+        #s3_object = s3_connection.Object(bucket,photo)
+        #s3_response = s3_object.get()
+        #stream = io.BytesIO(s3_response['Body'].read())
+        #image = PilImage.open(stream)
 
-    stream = io.BytesIO(s3_response['Body'].read())
-    image = PilImage.open(stream)
+    image = PilImage.open(filename)
 
     if hasattr(image, '_getexif'):
         orientation = 0x0112
