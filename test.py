@@ -1,9 +1,21 @@
 import boto3
 import io
-from PIL import Image, ImageDraw, ExifTags, ImageColor
+from PIL import ImageDraw, ExifTags, ImageColor
+from PIL import Image as PilImage
 
-if __name__ == "__main__":
-     
+from tkinter import filedialog
+from tkinter import *
+
+root = Tk()
+
+def fileopen():
+    filename =  filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("jpeg files","*.jpg"),("all files","*.*")))
+    print(filename)
+    text.delete(1.0, END)
+    text.insert(END, filename+'\n')
+    loadimage()
+
+def loadimage():
     bucket="rekognition-20181204"
     photo="input.jpg"
     client=boto3.client('rekognition')
@@ -14,7 +26,7 @@ if __name__ == "__main__":
     s3_response = s3_object.get()
 
     stream = io.BytesIO(s3_response['Body'].read())
-    image = Image.open(stream)
+    image = PilImage.open(stream)
 
     if hasattr(image, '_getexif'):
         orientation = 0x0112
@@ -22,9 +34,9 @@ if __name__ == "__main__":
         if exif is not None and orientation in exif.keys():
             orientation = exif[orientation]
             rotations = {
-                    3: Image.ROTATE_180,
-                    6: Image.ROTATE_270,
-                    8: Image.ROTATE_90
+                    3: PilImage.ROTATE_180,
+                    6: PilImage.ROTATE_270,
+                    8: PilImage.ROTATE_90
                     }
 
             if orientation in rotations.keys():
@@ -41,8 +53,7 @@ if __name__ == "__main__":
     # calculate and display bounding boxes for each detected face       
     print('Detected faces for ' + photo)    
     for faceDetail in response['FaceDetails']:
-        print('The detected face is between ' + str(faceDetail['AgeRange']['Low']) 
-              + ' and ' + str(faceDetail['AgeRange']['High']) + ' years old')
+        text.insert(END, 'The detected face is between ' + str(faceDetail['AgeRange']['Low']) + ' and ' + str(faceDetail['AgeRange']['High']) + ' years old\n')
 
         box = faceDetail['BoundingBox']
         left = imgWidth * box['Left']
@@ -50,9 +61,9 @@ if __name__ == "__main__":
         width = imgWidth * box['Width']
         height = imgHeight * box['Height']
                 
-        print('Smile: {0:}'.format(str(faceDetail['Smile']['Value'])))
-        print('Gender: {0:}'.format(str(faceDetail['Gender']['Value'])))
-        print('Emotions: {0:}'.format(str(faceDetail['Emotions'][0]['Type'])))
+        text.insert(END, 'Smile: {0:}'.format(str(faceDetail['Smile']['Value']))+'\n')
+        text.insert(END, 'Emotions: {0:}'.format(str(faceDetail['Emotions'][0]['Type']))+'\n')
+        text.insert(END, 'Gender: {0:}'.format(str(faceDetail['Gender']['Value']))+'\n')
         print('Left: ' + '{0:.0f}'.format(left))
         print('Top: ' + '{0:.0f}'.format(top))
         print('Face Width: ' + "{0:.0f}".format(width))
@@ -70,8 +81,22 @@ if __name__ == "__main__":
 
         # Alternatively can draw rectangle. However you can't set line width.
         #draw.rectangle([left,top, left + width, top + height], outline='#00d400') 
-
-
-
-
     image.show()
+
+if __name__ == "__main__":
+    root.title('rekognition test')
+    scroll = Scrollbar(root)
+
+    text = Text(root, width=30, height=8)
+
+    text.config(yscrollcommand=scroll.set, font=('Arial', 8, 'bold', 'italic'))
+    scroll.config(command=text.yview)
+
+    scroll.grid(row=2, column=2, sticky=NS)
+    text.grid(row=2, column=1, sticky=W)
+
+    button = Button(text='choose file', width=30, command=fileopen)
+    button.grid(row=1, column=1, columnspan=2)
+
+    text.insert(END, 'init\n')
+    root.mainloop()
